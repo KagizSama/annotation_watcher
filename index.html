@@ -1,0 +1,1563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Annotation Editor - Computer Vision Tool</title>
+    <style>
+        :root {
+            --primary-color: #007AFF;
+            --secondary-color: #5856D6;
+            --success-color: #34C759;
+            --error-color: #FF3B30;
+            --warning-color: #FF9500;
+            --bg-primary: #FFFFFF;
+            --bg-secondary: #F2F2F7;
+            --text-primary: #000000;
+            --text-secondary: #8E8E93;
+            --border-color: #C6C6C8;
+            --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            --border-radius: 8px;
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1C1C1E;
+            --bg-secondary: #2C2C2E;
+            --text-primary: #FFFFFF;
+            --text-secondary: #8E8E93;
+            --border-color: #38383A;
+            --shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: all 0.3s ease;
+        }
+
+        .container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header Styles */
+        .header {
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            padding: var(--spacing-md);
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: var(--spacing-lg);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .upload-section {
+            display: flex;
+            gap: var(--spacing-md);
+            align-items: center;
+        }
+
+        .upload-group {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+        }
+
+        .upload-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-btn:hover {
+            background: #0056CC;
+            transform: translateY(-1px);
+        }
+
+        .upload-btn:active {
+            transform: translateY(0);
+        }
+
+        .upload-btn.edit-mode {
+            background: var(--error-color);
+        }
+
+        .upload-btn.edit-mode:hover {
+            background: #CC2E24;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .info-panel {
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-md);
+            min-width: 200px;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-xs) 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .theme-toggle {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-sm);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .theme-toggle:hover {
+            background: var(--border-color);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: var(--spacing-lg);
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .viewer-container {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: var(--spacing-lg);
+            height: calc(100vh - 200px);
+        }
+
+        .image-container {
+            position: relative;
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #imageCanvas {
+            max-width: 100%;
+            max-height: 100%;
+            cursor: grab;
+            transition: transform 0.1s ease;
+        }
+
+        #imageCanvas:active {
+            cursor: grabbing;
+        }
+
+        #imageCanvas.edit-mode {
+            cursor: crosshair;
+        }
+
+        .zoom-controls {
+            position: absolute;
+            top: var(--spacing-md);
+            right: var(--spacing-md);
+            display: flex;
+            gap: var(--spacing-xs);
+        }
+
+        .zoom-btn {
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.2s ease;
+        }
+
+        .zoom-btn:hover {
+            background: rgba(0, 0, 0, 0.9);
+            transform: scale(1.1);
+        }
+
+        /* Label Panel */
+        .label-panel {
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .label-panel-header {
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-primary);
+        }
+
+        .label-panel-header h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .toggle-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: color 0.2s ease;
+        }
+
+        .toggle-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .label-content {
+            flex: 1;
+            overflow: auto;
+            padding: var(--spacing-md);
+        }
+
+        #labelText {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: var(--text-primary);
+            background: var(--bg-primary);
+            padding: var(--spacing-md);
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+        }
+
+        /* Footer Navigation */
+        .footer {
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border-color);
+            padding: var(--spacing-md);
+        }
+
+        .footer-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .progress-info {
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .navigation {
+            display: flex;
+            gap: var(--spacing-md);
+            align-items: center;
+        }
+
+        .nav-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+
+        .nav-btn:hover {
+            background: #0056CC;
+            transform: translateY(-1px);
+        }
+
+        .nav-btn:disabled {
+            background: var(--text-secondary);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .keyboard-hint {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        /* Status Messages */
+        .status-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: var(--spacing-md);
+            border-radius: var(--border-radius);
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .status-message.show {
+            transform: translateX(0);
+        }
+
+        .status-message.success {
+            background: var(--success-color);
+        }
+
+        .status-message.error {
+            background: var(--error-color);
+        }
+
+        .status-message.warning {
+            background: var(--warning-color);
+        }
+
+        /* Loading Spinner */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--text-secondary);
+            border-radius: 50%;
+            border-top-color: var(--primary-color);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Edit Mode Styles */
+        .control-point {
+            cursor: pointer;
+        }
+
+        .control-point:hover {
+            transform: scale(1.2);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .viewer-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr auto;
+            }
+            
+            .label-panel {
+                max-height: 300px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: var(--spacing-md);
+            }
+            
+            .upload-section {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
+
+        /* Animation Classes */
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <span>🎯</span>
+                    <span>Professional Annotation Editor</span>
+                </div>
+                
+                <div class="upload-section">
+                    <div class="upload-group">
+                        <label for="imageFolder" class="upload-btn">
+                            📁 Select Image Folder
+                        </label>
+                        <input type="file" id="imageFolder" class="file-input" webkitdirectory multiple accept="image/*">
+                    </div>
+                    
+                    <div class="upload-group">
+                        <label for="labelFolder" class="upload-btn">
+                            🏷️ Select Label Folder
+                        </label>
+                        <input type="file" id="labelFolder" class="file-input" webkitdirectory multiple accept=".json">
+                    </div>
+                    
+                    <div class="upload-group">
+                        <button id="editModeBtn" class="upload-btn">
+                            ✏️ Edit Mode
+                        </button>
+                    </div>
+                    
+                    <div class="upload-group">
+                        <button id="exportBtn" class="upload-btn" disabled>
+                            💾 Export COCO JSON
+                        </button>
+                    </div>
+                </div>
+
+                <div class="info-panel">
+                    <div class="info-item">
+                        <span class="info-label">Current Image:</span>
+                        <span id="currentIndex">0</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Total Images:</span>
+                        <span id="totalImages">0</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Label File:</span>
+                        <span id="currentLabelFile">-</span>
+                    </div>
+                </div>
+
+                <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+                    🌙
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="viewer-container">
+                <div class="image-container">
+                    <canvas id="imageCanvas"></canvas>
+                    <div class="zoom-controls">
+                        <button id="zoomIn" class="zoom-btn" title="Zoom In">+</button>
+                        <button id="zoomOut" class="zoom-btn" title="Zoom Out">-</button>
+                        <button id="resetZoom" class="zoom-btn" title="Reset Zoom">⌂</button>
+                    </div>
+                </div>
+                
+                <!-- Label Content Panel -->
+                <div class="label-panel" id="labelPanel">
+                    <div class="label-panel-header">
+                        <h3>Annotation Data</h3>
+                        <button id="toggleLabelPanel" class="toggle-btn">−</button>
+                    </div>
+                    <div class="label-content" id="labelContent">
+                        <pre id="labelText">No annotation data loaded</pre>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer Navigation -->
+        <footer class="footer">
+            <div class="footer-content">
+                <div class="progress-info" id="progressInfo">
+                    No data loaded
+                </div>
+                
+                <div class="navigation">
+                    <button id="prevBtn" class="nav-btn" disabled>
+                        ← Previous
+                    </button>
+                    <button id="nextBtn" class="nav-btn" disabled>
+                        Next →
+                    </button>
+                </div>
+                
+                <div class="keyboard-hint">
+                    Use ← → keys to navigate
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Status Messages -->
+    <div id="statusMessage" class="status-message"></div>
+
+    <script>
+        // Global application state management
+        class AppState {
+            constructor() {
+                this.images = [];           // Image file list
+                this.labels = [];           // Label file list
+                this.matchedPairs = [];     // Matched image-label pairs
+                this.currentIndex = 0;      // Current image index
+                this.canvas = null;         // Canvas element
+                this.ctx = null;            // Canvas context
+                this.currentImage = null;   // Current image object
+                this.zoomLevel = 1;         // Current zoom level
+                this.panX = 0;              // Pan X position
+                this.panY = 0;              // Pan Y position
+                this.isDragging = false;    // Dragging state
+                this.lastMouseX = 0;        // Last mouse X position
+                this.lastMouseY = 0;        // Last mouse Y position
+                this.preloadedImages = new Map(); // Preloaded image cache
+                this.isEditMode = false;    // Edit mode state
+                this.selectedPolygon = null; // Currently selected polygon
+                this.selectedVertex = null;  // Currently selected vertex
+                this.modifiedData = null;   // Modified annotation data
+                this.originalData = null;   // Original annotation data backup
+                this.isDraggingVertex = false; // Vertex dragging state
+            }
+        }
+
+        // Initialize state and DOM elements
+        const state = new AppState();
+        let elements = {};
+
+        // High-contrast colors for polygon visualization - REMOVED BOUNDING BOX COLORS
+        const POLYGON_COLORS = [
+            '#FF3B30', // Red
+            '#007AFF', // Blue  
+            '#34C759', // Green
+            '#FF9500', // Orange
+            '#5856D6', // Purple
+            '#FF2D92', // Pink
+            '#00C7BE', // Teal
+            '#FFD60A', // Yellow
+            '#BF5AF2', // Violet
+            '#32D74B', // Lime
+            '#FF6B35', // Orange Red
+            '#5E5CE6', // Indigo
+            '#30D158', // Light Green
+            '#FF375F', // Rose
+            '#64D2FF', // Light Blue
+            '#BF5AF2', // Magenta
+            '#FFCC02', // Amber
+            '#FF9F0A', // Dark Orange
+            '#AC8E68', // Brown
+            '#8E8E93'  // Gray
+        ];
+
+        // Initialize application
+        function initApp() {
+            // Get DOM element references
+            elements = {
+                imageFolder: document.getElementById('imageFolder'),
+                labelFolder: document.getElementById('labelFolder'),
+                canvas: document.getElementById('imageCanvas'),
+                currentIndex: document.getElementById('currentIndex'),
+                totalImages: document.getElementById('totalImages'),
+                currentLabelFile: document.getElementById('currentLabelFile'),
+                progressInfo: document.getElementById('progressInfo'),
+                prevBtn: document.getElementById('prevBtn'),
+                nextBtn: document.getElementById('nextBtn'),
+                zoomIn: document.getElementById('zoomIn'),
+                zoomOut: document.getElementById('zoomOut'),
+                resetZoom: document.getElementById('resetZoom'),
+                themeToggle: document.getElementById('themeToggle'),
+                labelText: document.getElementById('labelText'),
+                toggleLabelPanel: document.getElementById('toggleLabelPanel'),
+                statusMessage: document.getElementById('statusMessage'),
+                editModeBtn: document.getElementById('editModeBtn'),
+                exportBtn: document.getElementById('exportBtn')
+            };
+
+            // Initialize canvas
+            state.canvas = elements.canvas;
+            state.ctx = state.canvas.getContext('2d');
+
+            // Bind event listeners
+            bindEventListeners();
+
+            // Initialize theme
+            initTheme();
+
+            showStatus('Application ready. Please select image and label folders to begin.', 'success');
+            
+            // Reset edit mode on initialization
+            state.isEditMode = false;
+            state.selectedPolygon = null;
+            state.selectedVertex = null;
+            updateEditModeUI();
+        }
+
+        // Bind all event listeners
+        function bindEventListeners() {
+            // File upload events
+            elements.imageFolder.addEventListener('change', handleImageFolderUpload);
+            elements.labelFolder.addEventListener('change', handleLabelFolderUpload);
+
+            // Navigation events
+            elements.prevBtn.addEventListener('click', showPreviousImage);
+            elements.nextBtn.addEventListener('click', showNextImage);
+
+            // Keyboard navigation
+            document.addEventListener('keydown', handleKeyboardNavigation);
+
+            // Zoom controls
+            elements.zoomIn.addEventListener('click', () => zoomImage(1.2));
+            elements.zoomOut.addEventListener('click', () => zoomImage(0.8));
+            elements.resetZoom.addEventListener('click', resetZoom);
+
+            // Canvas mouse events for pan, zoom, and editing
+            elements.canvas.addEventListener('wheel', handleMouseWheel);
+            elements.canvas.addEventListener('mousedown', handleMouseDown);
+            elements.canvas.addEventListener('mousemove', handleMouseMove);
+            elements.canvas.addEventListener('mouseup', handleMouseUp);
+            elements.canvas.addEventListener('mouseleave', handleMouseUp);
+
+            // Theme toggle
+            elements.themeToggle.addEventListener('click', toggleTheme);
+
+            // Label panel toggle
+            elements.toggleLabelPanel.addEventListener('click', toggleLabelPanel);
+
+            // Edit mode and export
+            elements.editModeBtn.addEventListener('click', toggleEditMode);
+            elements.exportBtn.addEventListener('click', exportCOCOJSON);
+
+            // Canvas click for edit mode
+            elements.canvas.addEventListener('click', handleCanvasClick);
+        }
+
+        // Handle image folder upload
+        async function handleImageFolderUpload(event) {
+            const files = Array.from(event.target.files);
+            const imageFiles = files.filter(file => 
+                /\.(jpg|jpeg|png)$/i.test(file.name)
+            );
+
+            if (imageFiles.length === 0) {
+                showStatus('No valid image files found (JPG, PNG, JPEG)', 'error');
+                return;
+            }
+
+            state.images = imageFiles;
+            elements.totalImages.textContent = imageFiles.length;
+            
+            showStatus(`Successfully loaded ${imageFiles.length} images`, 'success');
+            
+            // Auto-match if labels are already loaded
+            if (state.labels.length > 0) {
+                await matchImagesWithLabels();
+            }
+        }
+
+        // Handle label folder upload
+        async function handleLabelFolderUpload(event) {
+            const files = Array.from(event.target.files);
+            const labelFiles = files.filter(file => 
+                file.name.toLowerCase().endsWith('.json')
+            );
+
+            if (labelFiles.length === 0) {
+                showStatus('No valid JSON files found', 'error');
+                return;
+            }
+
+            state.labels = labelFiles;
+            
+            showStatus(`Successfully loaded ${labelFiles.length} label files`, 'success');
+            
+            // Auto-match if images are already loaded
+            if (state.images.length > 0) {
+                await matchImagesWithLabels();
+            }
+        }
+
+        // Match images with labels based on filename
+        async function matchImagesWithLabels() {
+            state.matchedPairs = [];
+            
+            for (const imageFile of state.images) {
+                const imageName = getFileNameWithoutExtension(imageFile.name);
+                
+                // Find corresponding label file
+                const labelFile = state.labels.find(label => {
+                    const labelName = getFileNameWithoutExtension(label.name);
+                    return labelName.includes(imageName) || imageName.includes(labelName);
+                });
+
+                if (labelFile) {
+                    state.matchedPairs.push({
+                        image: imageFile,
+                        label: labelFile,
+                        imageName: imageFile.name,
+                        labelName: labelFile.name
+                    });
+                } else {
+                    // Add image without label
+                    state.matchedPairs.push({
+                        image: imageFile,
+                        label: null,
+                        imageName: imageFile.name,
+                        labelName: 'No label'
+                    });
+                }
+            }
+
+            if (state.matchedPairs.length > 0) {
+                state.currentIndex = 0;
+                elements.totalImages.textContent = state.matchedPairs.length;
+                updateNavigationButtons();
+                await showCurrentImage();
+                
+                showStatus(`Successfully matched ${state.matchedPairs.length} image-label pairs`, 'success');
+            } else {
+                showStatus('Unable to match images with labels', 'error');
+            }
+        }
+
+        // Get filename without extension
+        function getFileNameWithoutExtension(filename) {
+            return filename.replace(/\.[^/.]+$/, '');
+        }
+
+        // Display current image with annotations
+        async function showCurrentImage() {
+            if (state.matchedPairs.length === 0) return;
+
+            const currentPair = state.matchedPairs[state.currentIndex];
+            
+            // Update UI info
+            elements.currentIndex.textContent = state.currentIndex + 1;
+            elements.currentLabelFile.textContent = currentPair.labelName;
+            elements.progressInfo.textContent = 
+                `Image ${state.currentIndex + 1}/${state.matchedPairs.length} - ${currentPair.imageName}`;
+
+            try {
+                // Load image
+                const imageUrl = URL.createObjectURL(currentPair.image);
+                const image = await loadImage(imageUrl);
+                state.currentImage = image;
+
+                // Draw image on canvas
+                drawImageOnCanvas(image);
+
+                // Load and draw annotations if available
+                if (currentPair.label) {
+                    const labelData = await loadLabelFile(currentPair.label);
+                    // Store original data backup
+                    state.originalData = JSON.parse(JSON.stringify(labelData));
+                    // Create modifiable copy if not exists
+                    if (!state.modifiedData) {
+                        state.modifiedData = JSON.parse(JSON.stringify(labelData));
+                    }
+                    displayLabelContent(state.modifiedData || labelData);
+                    drawAnnotations(state.modifiedData || labelData, image.width, image.height);
+                } else {
+                    elements.labelText.textContent = 'No label file for this image';
+                    state.originalData = null;
+                    state.modifiedData = null;
+                }
+
+                // Preload next image
+                preloadNextImage();
+
+                // Cleanup URL
+                URL.revokeObjectURL(imageUrl);
+
+                // Update export button state
+                updateExportButtonState();
+
+            } catch (error) {
+                console.error('Error displaying image:', error);
+                showStatus('Error displaying image: ' + error.message, 'error');
+            }
+        }
+
+        // Load image from URL
+        function loadImage(url) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = url;
+            });
+        }
+
+        // Draw image on canvas
+        function drawImageOnCanvas(image) {
+            // Calculate appropriate canvas size
+            const containerWidth = state.canvas.parentElement.clientWidth - 40;
+            const containerHeight = state.canvas.parentElement.clientHeight - 40;
+            
+            const scale = Math.min(
+                containerWidth / image.width,
+                containerHeight / image.height
+            );
+
+            state.canvas.width = image.width * scale;
+            state.canvas.height = image.height * scale;
+
+            // Reset zoom and pan
+            state.zoomLevel = 1;
+            state.panX = 0;
+            state.panY = 0;
+
+            // Draw image
+            state.ctx.clearRect(0, 0, state.canvas.width, state.canvas.height);
+            state.ctx.drawImage(image, 0, 0, state.canvas.width, state.canvas.height);
+        }
+
+        // Load label JSON file
+        async function loadLabelFile(labelFile) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        resolve(data);
+                    } catch (error) {
+                        reject(new Error('Invalid JSON file: ' + error.message));
+                    }
+                };
+                reader.onerror = reject;
+                reader.readAsText(labelFile);
+            });
+        }
+
+        // Display label content in panel
+        function displayLabelContent(labelData) {
+            elements.labelText.textContent = JSON.stringify(labelData, null, 2);
+        }
+
+        // Draw annotations on canvas - REMOVED BOUNDING BOX FUNCTIONALITY
+        function drawAnnotations(labelData, originalWidth, originalHeight) {
+            const scaleX = state.canvas.width / originalWidth;
+            const scaleY = state.canvas.height / originalHeight;
+
+            // Handle COCO format - ONLY POLYGONS, NO BOUNDING BOXES
+            if (labelData.annotations && Array.isArray(labelData.annotations)) {
+                drawCocoAnnotations(labelData.annotations, scaleX, scaleY);
+            }
+            // Handle LabelMe format
+            else if (labelData.shapes && Array.isArray(labelData.shapes)) {
+                drawLabelMeAnnotations(labelData.shapes, scaleX, scaleY);
+            }
+            else {
+                console.warn('Unsupported annotation format');
+            }
+        }
+
+        // Draw COCO annotations - MULTI-COLORED POLYGONS ONLY
+        function drawCocoAnnotations(annotations, scaleX, scaleY) {
+            annotations.forEach((annotation, index) => {
+                // Use index for color cycling to ensure distinct colors
+                const color = POLYGON_COLORS[index % POLYGON_COLORS.length];
+                
+                // Check if this polygon is selected
+                const isSelected = state.selectedPolygon && 
+                    state.selectedPolygon.annotationIndex === index;
+                const polygonColor = isSelected ? '#FFFFFF' : color;
+
+                // Draw segmentation polygons ONLY - NO BOUNDING BOXES
+                if (annotation.segmentation && Array.isArray(annotation.segmentation)) {
+                    annotation.segmentation.forEach((segmentation, segIndex) => {
+                        if (Array.isArray(segmentation) && segmentation.length >= 6) {
+                            drawPolygon(segmentation, scaleX, scaleY, polygonColor, isSelected, index, segIndex);
+                        }
+                    });
+                }
+            });
+        }
+
+        // Draw LabelMe annotations - MULTI-COLORED POLYGONS
+        function drawLabelMeAnnotations(shapes, scaleX, scaleY) {
+            shapes.forEach((shape, index) => {
+                // Use index for color cycling
+                const color = POLYGON_COLORS[index % POLYGON_COLORS.length];
+                
+                // Check if this polygon is selected
+                const isSelected = state.selectedPolygon && 
+                    state.selectedPolygon.shapeIndex === index;
+                const polygonColor = isSelected ? '#FFFFFF' : color;
+
+                if (shape.shape_type === 'polygon' && shape.points && Array.isArray(shape.points)) {
+                    // Convert points format from [[x1,y1], [x2,y2]] to [x1,y1,x2,y2]
+                    const flatPoints = shape.points.flat();
+                    if (flatPoints.length >= 6) {
+                        drawPolygon(flatPoints, scaleX, scaleY, polygonColor, isSelected, index);
+                    }
+                }
+            });
+        }
+
+        // Draw polygon with 30% transparency fill - ENHANCED FOR EDITING
+        function drawPolygon(points, scaleX, scaleY, color, isSelected = false, annotationIndex = -1, segmentationIndex = 0) {
+            if (points.length < 6) return; // Need at least 3 points (6 coordinates)
+
+            state.ctx.save();
+
+            // Draw fill with 30% transparency as specified
+            state.ctx.fillStyle = color + '4D'; // 30% opacity (4D = 77 in decimal = 30% of 255)
+            state.ctx.strokeStyle = isSelected ? '#FFFFFF' : color;
+            state.ctx.lineWidth = isSelected ? 3 : 2;
+
+            state.ctx.beginPath();
+            
+            // Move to first point
+            state.ctx.moveTo(points[0] * scaleX, points[1] * scaleY);
+            
+            // Draw to subsequent points
+            for (let i = 2; i < points.length; i += 2) {
+                state.ctx.lineTo(points[i] * scaleX, points[i + 1] * scaleY);
+            }
+            
+            state.ctx.closePath();
+            
+            // Fill and stroke
+            state.ctx.fill();
+            state.ctx.stroke();
+            
+            // Draw control points if selected and in edit mode
+            if (isSelected && state.isEditMode) {
+                drawControlPoints(points, scaleX, scaleY, annotationIndex, segmentationIndex);
+            }
+
+            state.ctx.restore();
+        }
+
+        // Draw control points for selected polygon - ENHANCED FOR VERTEX EDITING
+        function drawControlPoints(points, scaleX, scaleY, annotationIndex, segmentationIndex = 0) {
+            state.ctx.save();
+            
+            for (let i = 0; i < points.length; i += 2) {
+                const x = points[i] * scaleX;
+                const y = points[i + 1] * scaleY;
+                
+                // Check if this vertex is selected
+                const isVertexSelected = state.selectedVertex && 
+                    state.selectedVertex.annotationIndex === annotationIndex &&
+                    state.selectedVertex.segmentationIndex === segmentationIndex &&
+                    state.selectedVertex.vertexIndex === i / 2;
+                
+                state.ctx.fillStyle = isVertexSelected ? '#FF3B30' : '#FFFFFF';
+                state.ctx.strokeStyle = '#000000';
+                state.ctx.lineWidth = 2;
+                
+                state.ctx.beginPath();
+                state.ctx.arc(x, y, isVertexSelected ? 6 : 4, 0, 2 * Math.PI);
+                state.ctx.fill();
+                state.ctx.stroke();
+            }
+            
+            state.ctx.restore();
+        }
+
+        // Navigation functions
+        function showPreviousImage() {
+            if (state.matchedPairs.length === 0) return;
+            
+            // Reset edit state when changing images
+            state.selectedPolygon = null;
+            state.selectedVertex = null;
+            state.modifiedData = null;
+            
+            state.currentIndex = (state.currentIndex - 1 + state.matchedPairs.length) % state.matchedPairs.length;
+            showCurrentImage();
+        }
+
+        function showNextImage() {
+            if (state.matchedPairs.length === 0) return;
+            
+            // Reset edit state when changing images
+            state.selectedPolygon = null;
+            state.selectedVertex = null;
+            state.modifiedData = null;
+            
+            state.currentIndex = (state.currentIndex + 1) % state.matchedPairs.length;
+            showCurrentImage();
+        }
+
+        // Update navigation button states
+        function updateNavigationButtons() {
+            const hasData = state.matchedPairs.length > 0;
+            elements.prevBtn.disabled = !hasData;
+            elements.nextBtn.disabled = !hasData;
+        }
+
+        // Handle keyboard navigation
+        function handleKeyboardNavigation(event) {
+            if (state.matchedPairs.length === 0) return;
+
+            switch (event.key) {
+                case 'ArrowLeft':
+                    event.preventDefault();
+                    showPreviousImage();
+                    break;
+                case 'ArrowRight':
+                    event.preventDefault();
+                    showNextImage();
+                    break;
+                case 'Escape':
+                    if (state.isEditMode) {
+                        state.selectedPolygon = null;
+                        state.selectedVertex = null;
+                        showCurrentImage();
+                    }
+                    break;
+            }
+        }
+
+        // Zoom functions
+        function zoomImage(factor) {
+            state.zoomLevel *= factor;
+            state.zoomLevel = Math.max(0.1, Math.min(5, state.zoomLevel));
+            applyTransform();
+        }
+
+        function resetZoom() {
+            state.zoomLevel = 1;
+            state.panX = 0;
+            state.panY = 0;
+            applyTransform();
+        }
+
+        function applyTransform() {
+            state.canvas.style.transform = 
+                `scale(${state.zoomLevel}) translate(${state.panX}px, ${state.panY}px)`;
+        }
+
+        // Mouse event handlers - ENHANCED FOR POLYGON EDITING
+        function handleMouseWheel(event) {
+            event.preventDefault();
+            const factor = event.deltaY > 0 ? 0.9 : 1.1;
+            zoomImage(factor);
+        }
+
+        function handleMouseDown(event) {
+            if (state.isEditMode) {
+                const rect = state.canvas.getBoundingClientRect();
+                const x = (event.clientX - rect.left) / state.zoomLevel - state.panX;
+                const y = (event.clientY - rect.top) / state.zoomLevel - state.panY;
+                
+                // Check if clicking on a vertex
+                const vertex = findVertexAtPoint(x, y);
+                if (vertex) {
+                    state.selectedVertex = vertex;
+                    state.isDraggingVertex = true;
+                    showCurrentImage(); // Redraw to show selected vertex
+                    return;
+                }
+            }
+            
+            // Default pan behavior
+            state.isDragging = true;
+            state.lastMouseX = event.clientX;
+            state.lastMouseY = event.clientY;
+            state.canvas.style.cursor = 'grabbing';
+        }
+
+        function handleMouseMove(event) {
+            if (state.isDraggingVertex && state.selectedVertex) {
+                // Move vertex
+                const rect = state.canvas.getBoundingClientRect();
+                const x = (event.clientX - rect.left) / state.zoomLevel - state.panX;
+                const y = (event.clientY - rect.top) / state.zoomLevel - state.panY;
+                
+                moveVertex(state.selectedVertex, x, y);
+                showCurrentImage(); // Redraw with updated vertex position
+                return;
+            }
+            
+            if (!state.isDragging) return;
+
+            const deltaX = event.clientX - state.lastMouseX;
+            const deltaY = event.clientY - state.lastMouseY;
+
+            state.panX += deltaX / state.zoomLevel;
+            state.panY += deltaY / state.zoomLevel;
+
+            state.lastMouseX = event.clientX;
+            state.lastMouseY = event.clientY;
+
+            applyTransform();
+        }
+
+        function handleMouseUp() {
+            state.isDragging = false;
+            state.isDraggingVertex = false;
+            state.canvas.style.cursor = state.isEditMode ? 'crosshair' : 'grab';
+        }
+
+        // Find vertex at point - FOR VERTEX EDITING
+        function findVertexAtPoint(x, y) {
+            if (!state.modifiedData || !state.selectedPolygon) return null;
+            
+            const scaleX = state.canvas.width / state.currentImage.width;
+            const scaleY = state.canvas.height / state.currentImage.height;
+            const tolerance = 8; // Pixel tolerance for vertex selection
+            
+            // Handle COCO format
+            if (state.modifiedData.annotations && state.selectedPolygon.annotationIndex !== undefined) {
+                const annotation = state.modifiedData.annotations[state.selectedPolygon.annotationIndex];
+                if (annotation.segmentation) {
+                    for (let segIndex = 0; segIndex < annotation.segmentation.length; segIndex++) {
+                        const segmentation = annotation.segmentation[segIndex];
+                        for (let i = 0; i < segmentation.length; i += 2) {
+                            const vx = segmentation[i] * scaleX;
+                            const vy = segmentation[i + 1] * scaleY;
+                            const distance = Math.sqrt((x - vx) ** 2 + (y - vy) ** 2);
+                            
+                            if (distance <= tolerance) {
+                                return {
+                                    annotationIndex: state.selectedPolygon.annotationIndex,
+                                    segmentationIndex: segIndex,
+                                    vertexIndex: i / 2,
+                                    pointIndex: i
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Handle LabelMe format
+            if (state.modifiedData.shapes && state.selectedPolygon.shapeIndex !== undefined) {
+                const shape = state.modifiedData.shapes[state.selectedPolygon.shapeIndex];
+                if (shape.points) {
+                    for (let i = 0; i < shape.points.length; i++) {
+                        const vx = shape.points[i][0] * scaleX;
+                        const vy = shape.points[i][1] * scaleY;
+                        const distance = Math.sqrt((x - vx) ** 2 + (y - vy) ** 2);
+                        
+                        if (distance <= tolerance) {
+                            return {
+                                shapeIndex: state.selectedPolygon.shapeIndex,
+                                vertexIndex: i
+                            };
+                        }
+                    }
+                }
+            }
+            
+            return null;
+        }
+
+        // Move vertex to new position - CORE EDITING FUNCTIONALITY
+        function moveVertex(vertex, newX, newY) {
+            if (!state.modifiedData) return;
+            
+            const scaleX = state.canvas.width / state.currentImage.width;
+            const scaleY = state.canvas.height / state.currentImage.height;
+            
+            // Convert screen coordinates back to image coordinates
+            const imageX = newX / scaleX;
+            const imageY = newY / scaleY;
+            
+            // Handle COCO format
+            if (vertex.annotationIndex !== undefined) {
+                const annotation = state.modifiedData.annotations[vertex.annotationIndex];
+                if (annotation.segmentation && annotation.segmentation[vertex.segmentationIndex]) {
+                    annotation.segmentation[vertex.segmentationIndex][vertex.pointIndex] = imageX;
+                    annotation.segmentation[vertex.segmentationIndex][vertex.pointIndex + 1] = imageY;
+                }
+            }
+            
+            // Handle LabelMe format
+            if (vertex.shapeIndex !== undefined) {
+                const shape = state.modifiedData.shapes[vertex.shapeIndex];
+                if (shape.points && shape.points[vertex.vertexIndex]) {
+                    shape.points[vertex.vertexIndex][0] = imageX;
+                    shape.points[vertex.vertexIndex][1] = imageY;
+                }
+            }
+            
+            // Update label display
+            displayLabelContent(state.modifiedData);
+            updateExportButtonState();
+        }
+
+        // Preload next image for performance
+        function preloadNextImage() {
+            if (state.matchedPairs.length === 0) return;
+
+            const nextIndex = (state.currentIndex + 1) % state.matchedPairs.length;
+            const nextPair = state.matchedPairs[nextIndex];
+
+            if (!state.preloadedImages.has(nextIndex)) {
+                const imageUrl = URL.createObjectURL(nextPair.image);
+                loadImage(imageUrl).then(image => {
+                    state.preloadedImages.set(nextIndex, image);
+                    URL.revokeObjectURL(imageUrl);
+                }).catch(console.error);
+            }
+        }
+
+        // Theme management
+        function initTheme() {
+            const savedTheme = localStorage.getItem('annotation-editor-theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            updateThemeIcon(savedTheme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('annotation-editor-theme', newTheme);
+            updateThemeIcon(newTheme);
+        }
+
+        function updateThemeIcon(theme) {
+            elements.themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+
+        // Label panel toggle
+        function toggleLabelPanel() {
+            const panel = document.getElementById('labelContent');
+            const button = elements.toggleLabelPanel;
+            
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                button.textContent = '−';
+            } else {
+                panel.style.display = 'none';
+                button.textContent = '+';
+            }
+        }
+
+        // Status message system
+        function showStatus(message, type = 'success') {
+            const statusEl = elements.statusMessage;
+            statusEl.textContent = message;
+            statusEl.className = `status-message ${type}`;
+            
+            // Show message
+            statusEl.classList.add('show');
+            
+            // Auto hide after 3 seconds
+            setTimeout(() => {
+                statusEl.classList.remove('show');
+            }, 3000);
+        }
+
+        // Toggle edit mode - ENHANCED FOR POLYGON EDITING
+        function toggleEditMode() {
+            state.isEditMode = !state.isEditMode;
+            state.selectedPolygon = null;
+            state.selectedVertex = null;
+            updateEditModeUI();
+            
+            // Update canvas cursor
+            state.canvas.style.cursor = state.isEditMode ? 'crosshair' : 'grab';
+            
+            // Redraw to update UI
+            if (state.currentImage && state.matchedPairs.length > 0) {
+                showCurrentImage();
+            }
+        }
+        
+        // Update UI for edit mode
+        function updateEditModeUI() {
+            if (state.isEditMode) {
+                elements.editModeBtn.textContent = '✏️ Exit Edit Mode';
+                elements.editModeBtn.classList.add('edit-mode');
+                elements.canvas.classList.add('edit-mode');
+            } else {
+                elements.editModeBtn.textContent = '✏️ Edit Mode';
+                elements.editModeBtn.classList.remove('edit-mode');
+                elements.canvas.classList.remove('edit-mode');
+            }
+            
+            updateExportButtonState();
+        }
+        
+        // Update export button state
+        function updateExportButtonState() {
+            elements.exportBtn.disabled = !state.modifiedData || !state.isEditMode;
+        }
+        
+        // Handle canvas click - ENHANCED FOR POLYGON SELECTION
+        function handleCanvasClick(event) {
+            if (!state.isEditMode || state.matchedPairs.length === 0) return;
+            
+            const rect = state.canvas.getBoundingClientRect();
+            const x = (event.clientX - rect.left) / state.zoomLevel - state.panX;
+            const y = (event.clientY - rect.top) / state.zoomLevel - state.panY;
+            
+            // Find polygon at click point
+            const clickedPolygon = findPolygonAtPoint(x, y);
+            
+            if (clickedPolygon) {
+                state.selectedPolygon = clickedPolygon;
+                state.selectedVertex = null; // Reset vertex selection
+                showCurrentImage(); // Redraw to show selection
+                showStatus(`Selected polygon ${clickedPolygon.annotationIndex !== undefined ? clickedPolygon.annotationIndex : clickedPolygon.shapeIndex}`, 'success');
+            } else {
+                state.selectedPolygon = null;
+                state.selectedVertex = null;
+                showCurrentImage(); // Redraw to clear selection
+            }
+        }
+        
+        // Find polygon at point - ENHANCED FOR ACCURATE SELECTION
+        function findPolygonAtPoint(x, y) {
+            if (!state.modifiedData) return null;
+            
+            const scaleX = state.canvas.width / state.currentImage.width;
+            const scaleY = state.canvas.height / state.currentImage.height;
+            
+            // Check COCO format
+            if (state.modifiedData.annotations && Array.isArray(state.modifiedData.annotations)) {
+                for (let i = state.modifiedData.annotations.length - 1; i >= 0; i--) {
+                    const annotation = state.modifiedData.annotations[i];
+                    if (annotation.segmentation && Array.isArray(annotation.segmentation)) {
+                        for (let segIndex = 0; segIndex < annotation.segmentation.length; segIndex++) {
+                            const segmentation = annotation.segmentation[segIndex];
+                            if (isPointInPolygon(x, y, segmentation, scaleX, scaleY)) {
+                                return { annotationIndex: i, segmentationIndex: segIndex };
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Check LabelMe format
+            if (state.modifiedData.shapes && Array.isArray(state.modifiedData.shapes)) {
+                for (let i = state.modifiedData.shapes.length - 1; i >= 0; i--) {
+                    const shape = state.modifiedData.shapes[i];
+                    if (shape.shape_type === 'polygon' && shape.points) {
+                        const flatPoints = shape.points.flat();
+                        if (isPointInPolygon(x, y, flatPoints, scaleX, scaleY)) {
+                            return { shapeIndex: i };
+                        }
+                    }
+                }
+            }
+            
+            return null;
+        }
+        
+        // Check if point is inside polygon (Ray casting algorithm)
+        function isPointInPolygon(x, y, points, scaleX, scaleY) {
+            let inside = false;
+            const n = points.length / 2;
+            
+            for (let i = 0, j = n - 1; i < n; j = i++) {
+                const xi = points[i * 2] * scaleX;
+                const yi = points[i * 2 + 1] * scaleY;
+                const xj = points[j * 2] * scaleX;
+                const yj = points[j * 2 + 1] * scaleY;
+                
+                if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+                    inside = !inside;
+                }
+            }
+            
+            return inside;
+        }
+        
+        // Export COCO JSON - COMPLETE IMPLEMENTATION
+        function exportCOCOJSON() {
+            if (!state.modifiedData || state.matchedPairs.length === 0) {
+                showStatus('No modified data to export', 'error');
+                return;
+            }
+            
+            try {
+                // Ensure proper COCO format structure
+                const cocoData = ensureCOCOFormat(state.modifiedData);
+                
+                const currentPair = state.matchedPairs[state.currentIndex];
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const filename = `modified_${getFileNameWithoutExtension(currentPair.labelName)}_${timestamp}.json`;
+                
+                const blob = new Blob([JSON.stringify(cocoData, null, 2)], {
+                    type: 'application/json'
+                });
+                
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showStatus(`Successfully exported: ${filename}`, 'success');
+                
+            } catch (error) {
+                console.error('Export error:', error);
+                showStatus('Error exporting COCO JSON: ' + error.message, 'error');
+            }
+        }
+        
+        // Ensure proper COCO format structure
+        function ensureCOCOFormat(data) {
+            // If already in COCO format, return as-is
+            if (data.images && data.annotations && data.categories) {
+                return data;
+            }
+            
+            // Convert from other formats to COCO
+            const cocoData = {
+                info: {
+                    description: "Exported from Professional Annotation Editor",
+                    version: "1.0",
+                    year: new Date().getFullYear(),
+                    contributor: "Professional Annotation Editor",
+                    date_created: new Date().toISOString()
+                },
+                licenses: [],
+                images: [],
+                annotations: [],
+                categories: []
+            };
+            
+            // Add current image info
+            if (state.currentImage) {
+                cocoData.images.push({
+                    id: 1,
+                    width: state.currentImage.width,
+                    height: state.currentImage.height,
+                    file_name: state.matchedPairs[state.currentIndex].imageName,
+                    license: 0,
+                    flickr_url: "",
+                    coco_url: "",
+                    date_captured: new Date().toISOString()
+                });
+            }
+            
+            // Convert annotations
+            if (data.annotations) {
+                // Already COCO format annotations
+                cocoData.annotations = data.annotations.map((ann, index) => ({
+                    ...ann,
+                    id: ann.id || index + 1,
+                    image_id: 1,
+                    category_id: ann.category_id || 1,
+                    iscrowd: ann.iscrowd || 0
+                }));
+            } else if (data.shapes) {
+                // Convert from LabelMe format
+                cocoData.annotations = data.shapes.map((shape, index) => {
+                    const flatPoints = shape.points.flat();
+                    return {
+                        id: index + 1,
+                        image_id: 1,
+                        category_id: 1,
+                        segmentation: [flatPoints],
+                        area: calculatePolygonArea(flatPoints),
+                        bbox: calculateBoundingBox(flatPoints),
+                        iscrowd: 0
+                    };
+                });
+            }
+            
+            // Add default category
+            cocoData.categories.push({
+                id: 1,
+                name: "object",
+                supercategory: "thing"
+            });
+            
+            return cocoData;
+        }
+        
+        // Calculate polygon area
+        function calculatePolygonArea(points) {
+            let area = 0;
+            const n = points.length / 2;
+            
+            for (let i = 0; i < n; i++) {
+                const j = (i + 1) % n;
+                area += points[i * 2] * points[j * 2 + 1];
+                area -= points[j * 2] * points[i * 2 + 1];
+            }
+            
+            return Math.abs(area) / 2;
+        }
+        
+        // Calculate bounding box from points
+        function calculateBoundingBox(points) {
+            let minX = Infinity, minY = Infinity;
+            let maxX = -Infinity, maxY = -Infinity;
+            
+            for (let i = 0; i < points.length; i += 2) {
+                minX = Math.min(minX, points[i]);
+                maxX = Math.max(maxX, points[i]);
+                minY = Math.min(minY, points[i + 1]);
+                maxY = Math.max(maxY, points[i + 1]);
+            }
+            
+            return [minX, minY, maxX - minX, maxY - minY];
+        }
+
+        // Initialize application when DOM is loaded
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
