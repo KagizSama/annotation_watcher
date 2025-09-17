@@ -672,7 +672,7 @@ function App() {
                 <>
                   <li className="flex items-start gap-2">
                     <span className="w-1 h-1 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
-                    Drawing replacement polygon
+                    {editingPolygonId ? `Replacing Polygon ${polygons.findIndex(p => p.id === editingPolygonId) + 1}` : 'Drawing replacement polygon'}
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="w-1 h-1 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
@@ -748,9 +748,9 @@ function App() {
         {/* Status indicator */}
         {mode !== 'select' && (
           <div className="absolute top-6 left-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-3 rounded-xl shadow-lg font-medium">
-            {mode === 'draw' && isEditing ? `Replacing Polygon ${polygons.findIndex(p => p.id === editingPolygonId) + 1}...` : 
+            {mode === 'draw' && isEditing ? 'Replacing Polygon...' : 
              mode === 'draw' ? 'Drawing New Polygon...' : 
-             `Editing Polygon ${polygons.findIndex(p => p.id === selectedPolygonId) + 1} Points...`}
+             'Editing Polygon Points...'}
           </div>
         )}
 
