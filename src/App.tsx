@@ -748,9 +748,9 @@ function App() {
         {/* Status indicator */}
         {mode !== 'select' && (
           <div className="absolute top-6 left-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-3 rounded-xl shadow-lg font-medium">
-            {mode === 'draw' && isEditing ? 'Replacing Polygon...' : 
+            {mode === 'draw' && isEditing ? `Replacing Polygon ${polygons.findIndex(p => p.id === editingPolygonId) + 1}...` : 
              mode === 'draw' ? 'Drawing New Polygon...' : 
-             'Editing Polygon Points...'}
+             `Editing Polygon ${polygons.findIndex(p => p.id === selectedPolygonId) + 1} Points...`}
           </div>
         )}
 
