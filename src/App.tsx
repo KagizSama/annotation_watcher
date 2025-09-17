@@ -170,7 +170,11 @@ function App() {
 
   // Handle canvas click
   const handleCanvasClick = useCallback((e: React.MouseEvent) => {
-    if (isPanning || draggedPointIndex !== null) return;
+    // Prevent clicks during panning or dragging to avoid zoom issues
+    if (isPanning || draggedPointIndex !== null) {
+      e.preventDefault();
+      return;
+    }
 
     const point = screenToCanvas(e.clientX, e.clientY);
 
@@ -219,6 +223,7 @@ function App() {
           );
           
           if (distance < 10 / viewState.scale) {
+            e.preventDefault(); // Prevent zoom reset when clicking control points
             return; // Don't deselect if clicking on control point
           }
         }
@@ -259,13 +264,13 @@ function App() {
 
   // Handle mouse down for dragging
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent default browser behavior
     const point = screenToCanvas(e.clientX, e.clientY);
 
     if (e.button === 1 || (e.button === 0 && e.ctrlKey)) {
       // Middle mouse or Ctrl+click for panning
       setIsPanning(true);
       setLastPanPoint({ x: e.clientX, y: e.clientY });
-      e.preventDefault();
       return;
     }
 
@@ -281,7 +286,6 @@ function App() {
           
           if (distance < 10 / viewState.scale) {
             setDraggedPointIndex(i);
-            e.preventDefault();
             return;
           }
         }
@@ -360,6 +364,18 @@ function App() {
 
   // Start editing selected polygon
   const startEditing = (polygonId: string) => {
+    const selectedPolygon = polygons.find(p => p.id === polygonId);
+    if (selectedPolygon) {
+      // Clear the old polygon points and start fresh
+      setCurrentPoints([]);
+      setIsDrawing(true);
+      setIsEditing(true);
+      setSelectedPolygonId(polygonId);
+    }
+  };
+
+  // Start editing by replacing polygon completely
+  const replacePolygon = (polygonId: string) => {
     setSelectedPolygonId(polygonId);
     setIsEditing(true);
     setIsDrawing(true);
@@ -472,10 +488,10 @@ function App() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          startEditing(polygon.id);
+                          replacePolygon(polygon.id);
                         }}
                         className="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors"
-                        title="Edit polygon"
+                        title="Replace polygon (draw new)"
                       >
                         <Edit3 size={16} />
                       </button>
@@ -551,11 +567,20 @@ function App() {
           <h3 className="font-semibold text-gray-800 mb-2">Instructions</h3>
           <ul className="text-sm text-gray-600 space-y-1">
             {isDrawing ? (
-              <>
-                <li>• Click to add points</li>
-                <li>• Click near first point to close</li>
-                <li>• Press Escape to cancel</li>
-              </>
+              isEditing ? (
+                <>
+                  <li>• Drawing replacement polygon</li>
+                  <li>• Click to add points</li>
+                  <li>• Click near first point to close</li>
+                  <li>• Press Escape to cancel</li>
+                </>
+              ) : (
+                <>
+                  <li>• Click to add points</li>
+                  <li>• Click near first point to close</li>
+                  <li>• Press Escape to cancel</li>
+                </>
+              )
             ) : isEditing ? (
               <>
                 <li>• Drag control points to edit</li>
@@ -567,13 +592,28 @@ function App() {
                 <li>• Click polygons to select them</li>
                 <li>• Use sidebar to manage polygons</li>
                 <li>• Scroll to zoom, Ctrl+drag to pan</li>
+                <li>• Edit button replaces polygon</li>
               </>
             )}
           </ul>
+        </div>
+
+        {/* Status indicator */}
+        {(isDrawing || isEditing) && (
+          <div className="absolute top-4 left-4 bg-blue-600 text-white px-3 py-2 rounded-lg shadow-lg">
+            {isDrawing && isEditing ? 'Replacing Polygon...' : 
+             isDrawing ? 'Drawing New Polygon...' : 
+             isEditing ? 'Editing Polygon...' : ''}
+          </div>
+        )}
+
+        {/* Zoom level indicator */}
+        <div className="absolute bottom-4 right-4 bg-white bg-opacity-90 px-3 py-2 rounded-lg shadow-lg">
+          <div className="text-sm text-gray-600">
+            Zoom: {Math.round(viewState.scale * 100)}%
+          </div>
         </div>
       </div>
     </div>
   );
 }
-
-export default App;
