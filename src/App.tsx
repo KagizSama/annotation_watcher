@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Edit3, Trash2, Plus, ZoomIn, ZoomOut, RotateCcw, MousePointer } from 'lucide-react';
+import { Edit3, Trash2, Plus, ZoomIn, ZoomOut, RotateCcw, MousePointer, RefreshCw } from 'lucide-react';
 
 interface Point {
   x: number;
@@ -30,11 +30,10 @@ function App() {
   const [isPanning, setIsPanning] = useState(false);
   const [lastPanPoint, setLastPanPoint] = useState<Point | null>(null);
   const [mode, setMode] = useState<'select' | 'draw' | 'edit'>('select');
+  const [editingPolygonId, setEditingPolygonId] = useState<string | null>(null);
+  const [isReplacing, setIsReplacing] = useState(false);
 
   const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
-  
-  // Add state for tracking edit operations
-  const [editingPolygonId, setEditingPolygonId] = useState<string | null>(null);
 
   // Convert screen coordinates to canvas coordinates
   const screenToCanvas = useCallback((screenX: number, screenY: number): Point => {
@@ -97,6 +96,10 @@ function App() {
       if (polygon.points.length < 2) return;
 
       const isSelected = polygon.id === selectedPolygonId;
+      const isBeingReplaced = polygon.id === editingPolygonId && isReplacing;
+      
+      // Skip drawing if polygon is being replaced
+      if (isBeingReplaced) return;
       
       // Draw polygon fill
       ctx.fillStyle = polygon.color + '20';
@@ -121,7 +124,7 @@ function App() {
         
         polygon.points.forEach((point, index) => {
           ctx.beginPath();
-          ctx.arc(point.x, point.y, 8 / viewState.scale, 0, 2 * Math.PI);
+          ctx.arc(point.x, point.y, 10 / viewState.scale, 0, 2 * Math.PI);
           ctx.fill();
           ctx.stroke();
           
@@ -129,7 +132,7 @@ function App() {
           if (draggedPointIndex === index) {
             ctx.fillStyle = '#3b82f6';
             ctx.beginPath();
-            ctx.arc(point.x, point.y, 8 / viewState.scale, 0, 2 * Math.PI);
+            ctx.arc(point.x, point.y, 10 / viewState.scale, 0, 2 * Math.PI);
             ctx.fill();
             ctx.fillStyle = '#ffffff';
           }
@@ -175,7 +178,7 @@ function App() {
           ctx.strokeStyle = '#10b981';
           ctx.lineWidth = 3 / viewState.scale;
           ctx.beginPath();
-          ctx.arc(point.x, point.y, 10 / viewState.scale, 0, 2 * Math.PI);
+          ctx.arc(point.x, point.y, 12 / viewState.scale, 0, 2 * Math.PI);
           ctx.stroke();
           ctx.strokeStyle = '#ffffff';
           ctx.lineWidth = 2 / viewState.scale;
@@ -184,7 +187,7 @@ function App() {
     }
 
     ctx.restore();
-  }, [polygons, selectedPolygonId, mode, currentPoints, draggedPointIndex, viewState]);
+  }, [polygons, selectedPolygonId, mode, currentPoints, draggedPointIndex, viewState, editingPolygonId, isReplacing]);
 
   // Handle canvas click
   const handleCanvasClick = useCallback((e: React.MouseEvent) => {
@@ -206,14 +209,14 @@ function App() {
         if (distance < 20 / viewState.scale) {
           // Close polygon
           const newPolygon: Polygon = {
-            id: isEditing && selectedPolygonId ? selectedPolygonId : `polygon-${Date.now()}`,
+            id: editingPolygonId || `polygon-${Date.now()}`,
             points: [...currentPoints],
             color: colors[polygons.length % colors.length]
           };
 
-          if (isEditing && selectedPolygonId) {
+          if (editingPolygonId && isReplacing) {
             // Replace existing polygon
-            setPolygons(prev => prev.map(p => p.id === selectedPolygonId ? newPolygon : p));
+            setPolygons(prev => prev.map(p => p.id === editingPolygonId ? newPolygon : p));
           } else {
             // Add new polygon
             setPolygons(prev => [...prev, newPolygon]);
@@ -222,6 +225,8 @@ function App() {
           setCurrentPoints([]);
           setIsDrawing(false);
           setIsEditing(false);
+          setIsReplacing(false);
+          setEditingPolygonId(null);
           setSelectedPolygonId(newPolygon.id);
           setMode('select');
           return;
@@ -240,7 +245,7 @@ function App() {
             Math.pow(point.x - controlPoint.x, 2) + Math.pow(point.y - controlPoint.y, 2)
           );
           
-          if (distance < 12 / viewState.scale) {
+          if (distance < 15 / viewState.scale) {
             return; // Don't deselect if clicking on control point
           }
         }
@@ -276,7 +281,7 @@ function App() {
         setSelectedPolygonId(null);
       }
     }
-  }, [mode, currentPoints, selectedPolygonId, polygons, isPanning, draggedPointIndex, screenToCanvas, viewState.scale, isEditing]);
+  }, [mode, currentPoints, selectedPolygonId, polygons, isPanning, draggedPointIndex, screenToCanvas, viewState.scale, editingPolygonId, isReplacing]);
 
   // Handle mouse down for dragging
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -300,7 +305,7 @@ function App() {
             Math.pow(point.x - controlPoint.x, 2) + Math.pow(point.y - controlPoint.y, 2)
           );
           
-          if (distance < 12 / viewState.scale) {
+          if (distance < 15 / viewState.scale) {
             setDraggedPointIndex(i);
             return;
           }
@@ -375,6 +380,8 @@ function App() {
     setMode('draw');
     setIsDrawing(true);
     setIsEditing(false);
+    setIsReplacing(false);
+    setEditingPolygonId(null);
     setSelectedPolygonId(null);
     setCurrentPoints([]);
   };
@@ -385,46 +392,52 @@ function App() {
     setMode('select');
     setIsDrawing(false);
     setIsEditing(false);
+    setIsReplacing(false);
+    setEditingPolygonId(null);
     setCurrentPoints([]);
   };
 
-  // Start editing by replacing polygon completely
-  const editPolygon = (polygonId: string) => {
-    const polygonToEdit = polygons.find(p => p.id === polygonId);
-    if (!polygonToEdit) return;
-    
-    // Clear the existing polygon points and start fresh drawing
-    setSelectedPolygonId(polygonId);
-    setEditingPolygonId(polygonId);
-    setMode('draw');
-    setIsEditing(true);
-    setIsDrawing(true);
-    setCurrentPoints([]);
-    
-    // Clear the polygon's points immediately to show it's being replaced
-    setPolygons(prev => prev.map(p => 
-      p.id === polygonId ? { ...p, points: [] } : p
-    ));
-  };
-
-  // Start editing existing polygon points
+  // Start editing existing polygon points (drag mode)
   const editPolygonPoints = (polygonId: string) => {
     setSelectedPolygonId(polygonId);
     setEditingPolygonId(null);
     setMode('edit');
     setIsDrawing(false);
     setIsEditing(false);
+    setIsReplacing(false);
     setCurrentPoints([]);
   };
 
-  // Delete polygon
+  // Start replacing polygon completely (redraw mode)
+  const replacePolygon = (polygonId: string) => {
+    const polygonToReplace = polygons.find(p => p.id === polygonId);
+    if (!polygonToReplace) return;
+    
+    setSelectedPolygonId(polygonId);
+    setEditingPolygonId(polygonId);
+    setMode('draw');
+    setIsEditing(true);
+    setIsDrawing(true);
+    setIsReplacing(true);
+    setCurrentPoints([]);
+  };
+
+  // Delete polygon with confirmation
   const deletePolygon = (polygonId: string) => {
+    const polygonIndex = polygons.findIndex(p => p.id === polygonId);
+    if (polygonIndex === -1) return;
+    
+    const confirmed = window.confirm(`Are you sure you want to delete Polygon ${polygonIndex + 1}?`);
+    if (!confirmed) return;
+    
     setPolygons(prev => prev.filter(p => p.id !== polygonId));
     if (selectedPolygonId === polygonId) {
       setSelectedPolygonId(null);
       setMode('select');
       setIsEditing(false);
       setIsDrawing(false);
+      setIsReplacing(false);
+      setEditingPolygonId(null);
     }
   };
 
@@ -456,9 +469,21 @@ function App() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        if (isReplacing && editingPolygonId) {
+          // Restore the original polygon if canceling replacement
+          const originalPolygon = polygons.find(p => p.id === editingPolygonId);
+          if (originalPolygon && originalPolygon.points.length === 0) {
+            // If we cleared the polygon, we need to restore it from backup
+            // For now, just delete it since we don't have backup
+            setPolygons(prev => prev.filter(p => p.id !== editingPolygonId));
+          }
+        }
+        
         setMode('select');
         setIsDrawing(false);
         setIsEditing(false);
+        setIsReplacing(false);
+        setEditingPolygonId(null);
         setCurrentPoints([]);
         setSelectedPolygonId(null);
       }
@@ -466,7 +491,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [isReplacing, editingPolygonId, polygons]);
 
   // Auto-resize canvas
   useEffect(() => {
@@ -488,7 +513,7 @@ function App() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Left Sidebar - Fixed width, scrollable content */}
+      {/* Left Sidebar - Enhanced with better styling */}
       <div className="w-80 bg-white shadow-xl border-r border-gray-200 flex flex-col">
         {/* Header */}
         <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
@@ -503,23 +528,23 @@ function App() {
           </button>
         </div>
 
-        {/* Mode Indicator */}
+        {/* Mode Indicator - Enhanced */}
         <div className="px-6 py-3 bg-gray-50 border-b border-gray-200">
           <div className="flex items-center gap-2 text-sm">
-            <div className={`w-2 h-2 rounded-full ${
+            <div className={`w-3 h-3 rounded-full ${
               mode === 'select' ? 'bg-green-500' : 
               mode === 'draw' ? 'bg-blue-500' : 
               'bg-orange-500'
             }`} />
             <span className="font-medium text-gray-700">
               {mode === 'select' ? 'Selection Mode' : 
-               mode === 'draw' ? (isEditing ? 'Replacing Polygon' : 'Drawing Mode') : 
-               'Edit Mode'}
+               mode === 'draw' ? (isReplacing ? `Replacing Polygon ${polygons.findIndex(p => p.id === editingPolygonId) + 1}` : 'Drawing New Polygon') : 
+               `Editing Polygon ${polygons.findIndex(p => p.id === selectedPolygonId) + 1} Points`}
             </span>
           </div>
         </div>
 
-        {/* Polygons List */}
+        {/* Polygons List - Enhanced */}
         <div className="flex-1 overflow-y-auto">
           <div className="p-4">
             <div className="flex items-center justify-between mb-4">
@@ -527,7 +552,7 @@ function App() {
                 Polygons ({polygons.length})
               </h2>
               {selectedPolygonId && (
-                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">
                   Selected
                 </span>
               )}
@@ -543,66 +568,85 @@ function App() {
               </div>
             ) : (
               <div className="space-y-3">
-                {polygons.map((polygon, index) => (
-                  <div
-                    key={polygon.id}
-                    className={`p-4 rounded-xl border-2 transition-all duration-200 ${
-                      selectedPolygonId === polygon.id
-                        ? 'border-blue-500 bg-blue-50 shadow-md'
-                        : 'border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="w-5 h-5 rounded-full border-2 border-white shadow-sm"
-                          style={{ backgroundColor: polygon.color }}
-                        />
-                        <span className="font-semibold text-gray-800">
-                          Polygon {index + 1}
+                {polygons.map((polygon, index) => {
+                  const isSelected = selectedPolygonId === polygon.id;
+                  const isBeingEdited = mode === 'edit' && selectedPolygonId === polygon.id;
+                  const isBeingReplaced = isReplacing && editingPolygonId === polygon.id;
+                  
+                  return (
+                    <div
+                      key={polygon.id}
+                      className={`p-4 rounded-xl border-2 transition-all duration-200 ${
+                        isSelected
+                          ? 'border-blue-500 bg-blue-50 shadow-md'
+                          : 'border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-5 h-5 rounded-full border-2 border-white shadow-sm"
+                            style={{ backgroundColor: polygon.color }}
+                          />
+                          <span className="font-semibold text-gray-800">
+                            Polygon {index + 1}
+                          </span>
+                          {isBeingReplaced && (
+                            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">
+                              Replacing...
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                          {polygon.points.length} points
                         </span>
                       </div>
-                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                        {polygon.points.length} points
-                      </span>
+                      
+                      <div className="grid grid-cols-4 gap-2">
+                        <button
+                          onClick={() => selectPolygon(polygon.id)}
+                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            isSelected && mode === 'select'
+                              ? 'bg-green-600 text-white'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                          title="Select polygon"
+                        >
+                          <MousePointer size={14} />
+                        </button>
+                        <button
+                          onClick={() => editPolygonPoints(polygon.id)}
+                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            isBeingEdited
+                              ? 'bg-orange-600 text-white'
+                              : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                          }`}
+                          title="Edit polygon points (drag mode)"
+                        >
+                          <Edit3 size={14} />
+                        </button>
+                        <button
+                          onClick={() => replacePolygon(polygon.id)}
+                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            isBeingReplaced
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                          }`}
+                          title="Replace polygon (redraw completely)"
+                        >
+                          <RefreshCw size={14} />
+                        </button>
+                        <button
+                          onClick={() => deletePolygon(polygon.id)}
+                          className="px-3 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg text-sm font-medium transition-colors"
+                          title="Delete polygon"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
-                    
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => selectPolygon(polygon.id)}
-                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          selectedPolygonId === polygon.id
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
-                        <MousePointer size={14} className="inline mr-1" />
-                        Select
-                      </button>
-                      <button
-                        onClick={() => editPolygonPoints(polygon.id)}
-                        className="px-3 py-2 bg-orange-100 text-orange-700 hover:bg-orange-200 rounded-lg text-sm font-medium transition-colors"
-                        title="Edit polygon points"
-                      >
-                        <Edit3 size={14} />
-                      </button>
-                      <button
-                        onClick={() => editPolygon(polygon.id)}
-                        className="px-3 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg text-sm font-medium transition-colors"
-                        title="Replace polygon (draw new)"
-                      >
-                        <Plus size={14} />
-                      </button>
-                      <button
-                        onClick={() => deletePolygon(polygon.id)}
-                        className="px-3 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg text-sm font-medium transition-colors"
-                        title="Delete polygon"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -656,10 +700,10 @@ function App() {
           onContextMenu={(e) => e.preventDefault()}
         />
         
-        {/* Instructions Panel */}
+        {/* Instructions Panel - Enhanced */}
         <div className="absolute top-6 right-6 bg-white bg-opacity-95 backdrop-blur-sm p-5 rounded-xl shadow-lg max-w-sm border border-gray-200">
           <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${
+            <div className={`w-3 h-3 rounded-full ${
               mode === 'select' ? 'bg-green-500' : 
               mode === 'draw' ? 'bg-blue-500' : 
               'bg-orange-500'
@@ -668,15 +712,15 @@ function App() {
           </h3>
           <ul className="text-sm text-gray-600 space-y-2">
             {mode === 'draw' ? (
-              isEditing ? (
+              isReplacing ? (
                 <>
                   <li className="flex items-start gap-2">
                     <span className="w-1 h-1 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
-                    {editingPolygonId ? `Replacing Polygon ${polygons.findIndex(p => p.id === editingPolygonId) + 1}` : 'Drawing replacement polygon'}
+                    Replacing Polygon {polygons.findIndex(p => p.id === editingPolygonId) + 1}
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="w-1 h-1 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
-                    Click to add points
+                    Click to add points for new shape
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="w-1 h-1 bg-green-500 rounded-full mt-2 flex-shrink-0" />
@@ -684,7 +728,7 @@ function App() {
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="w-1 h-1 bg-red-500 rounded-full mt-2 flex-shrink-0" />
-                    Press Escape to cancel
+                    Press Escape to cancel replacement
                   </li>
                 </>
               ) : (
@@ -707,7 +751,7 @@ function App() {
               <>
                 <li className="flex items-start gap-2">
                   <span className="w-1 h-1 bg-orange-500 rounded-full mt-2 flex-shrink-0" />
-                  Drag control points to edit
+                  Drag white control points to edit shape
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="w-1 h-1 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
@@ -726,7 +770,7 @@ function App() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="w-1 h-1 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
-                  Use sidebar to manage polygons
+                  Use sidebar buttons to manage polygons
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="w-1 h-1 bg-purple-500 rounded-full mt-2 flex-shrink-0" />
@@ -734,23 +778,23 @@ function App() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="w-1 h-1 bg-orange-500 rounded-full mt-2 flex-shrink-0" />
-                  Orange edit = modify points
+                  Orange = Edit points (drag mode)
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="w-1 h-1 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
-                  Blue + = replace polygon
+                  Blue refresh = Replace completely
                 </li>
               </>
             )}
           </ul>
         </div>
 
-        {/* Status indicator */}
+        {/* Status indicator - Enhanced */}
         {mode !== 'select' && (
           <div className="absolute top-6 left-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-3 rounded-xl shadow-lg font-medium">
-            {mode === 'draw' && isEditing ? 'Replacing Polygon...' : 
+            {mode === 'draw' && isReplacing ? `Replacing Polygon ${polygons.findIndex(p => p.id === editingPolygonId) + 1}...` : 
              mode === 'draw' ? 'Drawing New Polygon...' : 
-             'Editing Polygon Points...'}
+             `Editing Polygon ${polygons.findIndex(p => p.id === selectedPolygonId) + 1} Points...`}
           </div>
         )}
 
