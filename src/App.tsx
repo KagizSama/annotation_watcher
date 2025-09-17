@@ -32,6 +32,9 @@ function App() {
   const [mode, setMode] = useState<'select' | 'draw' | 'edit'>('select');
 
   const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
+  
+  // Add state for tracking edit operations
+  const [editingPolygonId, setEditingPolygonId] = useState<string | null>(null);
 
   // Convert screen coordinates to canvas coordinates
   const screenToCanvas = useCallback((screenX: number, screenY: number): Point => {
@@ -387,16 +390,27 @@ function App() {
 
   // Start editing by replacing polygon completely
   const editPolygon = (polygonId: string) => {
+    const polygonToEdit = polygons.find(p => p.id === polygonId);
+    if (!polygonToEdit) return;
+    
+    // Clear the existing polygon points and start fresh drawing
     setSelectedPolygonId(polygonId);
+    setEditingPolygonId(polygonId);
     setMode('draw');
     setIsEditing(true);
     setIsDrawing(true);
     setCurrentPoints([]);
+    
+    // Clear the polygon's points immediately to show it's being replaced
+    setPolygons(prev => prev.map(p => 
+      p.id === polygonId ? { ...p, points: [] } : p
+    ));
   };
 
   // Start editing existing polygon points
   const editPolygonPoints = (polygonId: string) => {
     setSelectedPolygonId(polygonId);
+    setEditingPolygonId(null);
     setMode('edit');
     setIsDrawing(false);
     setIsEditing(false);
