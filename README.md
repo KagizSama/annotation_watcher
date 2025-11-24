@@ -12,15 +12,15 @@ Phần mềm **Labeling Tool** hỗ trợ gán nhãn (label) dữ liệu phục 
 
 ## 1. Tính năng chính
 
-- ✅ Gán nhãn (label) cho ảnh theo từng lớp (image-level classification).
-- ✅ Vẽ và chỉnh sửa **bounding box** cho bài toán object detection.
-- ✅ Quản lý danh sách nhãn: thêm, xoá, sửa tên label.
-- ✅ Hỗ trợ duyệt ảnh nhanh (Next / Previous).
-- ✅ Tự động lưu tiến độ gán nhãn theo từng project.
-- ✅ Xuất file nhãn ra các định dạng:
+-  Gán nhãn (label) cho ảnh theo từng lớp (image-level classification).
+-  Vẽ và chỉnh sửa **bounding box** cho bài toán object detection.
+-  Quản lý danh sách nhãn: thêm, xoá, sửa tên label.
+-  Hỗ trợ duyệt ảnh nhanh (Next / Previous).
+-  Tự động lưu tiến độ gán nhãn theo từng project.
+-  Xuất file nhãn ra các định dạng:
   - `CSV` (image_path, x_min, y_min, x_max, y_max, label)
   - Định dạng tương thích YOLO (nếu cần).
-- ✅ Giao diện đơn giản, phù hợp cho sinh viên/nhóm nghiên cứu gán nhãn thủ công.
+-  Giao diện đơn giản, phù hợp cho sinh viên/nhóm nghiên cứu gán nhãn thủ công.
 
 ---
 
