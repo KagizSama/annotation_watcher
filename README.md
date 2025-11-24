@@ -31,9 +31,7 @@ Phần mềm **Labeling Tool** hỗ trợ gán nhãn (label) dữ liệu phục 
 - Thư viện xử lý ảnh: `Pillow` hoặc `opencv-python` (nếu có).
 - Quản lý môi trường & phụ thuộc: `pip` + `requirements.txt`.
 
-> 📌 Ghi chú: Phần này bạn có thể chỉnh lại chính xác theo project của mình (VD: “Dùng PyQt5 cho GUI”, “Dùng FastAPI + React cho web”, …).
 
----
 
 ## 3. Cài đặt
 
